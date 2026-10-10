@@ -149,10 +149,13 @@ MCPは、
 
 # 4. 動作環境
 
-推奨：
+必須：
 
 - WordPress 6.9以上
-- PHP 8.1以上
+- PHP 8.3以上（セキュリティサポートが提供されているバージョンに限る）
+
+推奨：
+
 - HTTPS
 - REST API利用可能
 - Pretty Permalink推奨
