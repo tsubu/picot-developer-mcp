@@ -3,7 +3,7 @@
  * Plugin Name: Picot Developer MCP
  * Plugin URI: https://picot.tokyo/
  * Description: AI向けのWordPress開発ブリッジ。有効なテーマと指定したプラグインだけを開発・検証し、成果物を別サイトへ移植します。
- * Version: 1.0.0
+ * Version: 1.0.1
  * Requires at least: 6.9
  * Requires PHP: 8.3
  * Tested up to: 7.2
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PICOT_DEV_MCP_VERSION', '1.0.0' );
+define( 'PICOT_DEV_MCP_VERSION', '1.0.1' );
 define( 'PICOT_DEV_MCP_FILE', __FILE__ );
 define( 'PICOT_DEV_MCP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PICOT_DEV_MCP_URL', plugin_dir_url( __FILE__ ) );

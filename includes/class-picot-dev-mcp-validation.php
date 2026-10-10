@@ -89,9 +89,35 @@ class Picot_Dev_Mcp_Validation {
 		return array(
 			'ok'     => ! $fatal,
 			'fatal'  => $fatal,
-			'checks' => $checks,
-			'logs'   => $logs,
+			'checks' => array_map( array( __CLASS__, 'relative_check' ), $checks ),
+			'logs'   => array_map( array( __CLASS__, 'strip_root' ), $logs ),
 		);
+	}
+
+	/**
+	 * Replace absolute server paths in one check result with site-relative ones.
+	 *
+	 * @param array<string, mixed> $check Check result.
+	 * @return array<string, mixed>
+	 */
+	private static function relative_check( array $check ) {
+		foreach ( array( 'path', 'detail' ) as $key ) {
+			if ( isset( $check[ $key ] ) && is_string( $check[ $key ] ) ) {
+				$check[ $key ] = self::strip_root( $check[ $key ] );
+			}
+		}
+		return $check;
+	}
+
+	/**
+	 * Remove the WordPress install root from text so results do not disclose the server layout.
+	 *
+	 * @param string $text Text.
+	 * @return string
+	 */
+	private static function strip_root( $text ) {
+		$root = trailingslashit( wp_normalize_path( ABSPATH ) );
+		return str_replace( array( $root, untrailingslashit( ABSPATH ) . '/' ), '', wp_normalize_path( (string) $text ) );
 	}
 
 	/**

@@ -146,35 +146,70 @@ class Picot_Dev_Mcp_Transfer {
 		if ( is_wp_error( $verified ) ) {
 			return $verified;
 		}
-		$url = untrailingslashit( $peer['url'] ) . '/wp-json/picot-developer-mcp/v1/transfer?path=' . rawurlencode( $path_key );
+		$url = add_query_arg( 'path', rawurlencode( $path_key ), self::peer_rest_url( $peer['url'], '/picot-developer-mcp/v1/transfer' ) );
+		$tmp = wp_tempnam( 'picot-dev-transfer' );
+		if ( ! $tmp ) {
+			return Picot_Dev_Mcp_Errors::make( 'migration_failed', __( '一時ファイルを作成できません。', 'picot-developer-mcp' ) );
+		}
+		// Stream to disk so large media do not have to fit in PHP memory.
 		$response = wp_remote_get(
 			$url,
 			array(
-				'timeout'     => 30,
-				'redirection' => 0,
-				'headers'     => array(
+				'timeout'             => 120,
+				'redirection'         => 0,
+				'stream'              => true,
+				'filename'            => $tmp,
+				'limit_response_size' => self::max_transfer_bytes(),
+				'headers'             => array(
 					'X-Picot-Transfer-Token' => $token,
 				),
 			)
 		);
 		if ( is_wp_error( $response ) ) {
+			wp_delete_file( $tmp );
 			return Picot_Dev_Mcp_Errors::make( 'migration_failed', __( 'Peerからの転送に失敗しました。', 'picot-developer-mcp' ) );
 		}
 		$code = (int) wp_remote_retrieve_response_code( $response );
 		if ( 200 !== $code ) {
+			wp_delete_file( $tmp );
 			return Picot_Dev_Mcp_Errors::make( 'migration_failed', __( 'Peerが転送を拒否しました。', 'picot-developer-mcp' ), array( 'status' => $code ) );
 		}
-		$body = wp_remote_retrieve_body( $response );
-		$hash = hash( 'sha256', $body );
+		$length = (int) wp_remote_retrieve_header( $response, 'content-length' );
+		if ( $length > 0 && (int) filesize( $tmp ) !== $length ) {
+			wp_delete_file( $tmp );
+			return Picot_Dev_Mcp_Errors::make( 'migration_failed', __( '転送ファイルが上限サイズを超えたか、途中で切れました。', 'picot-developer-mcp' ) );
+		}
+		$hash = (string) hash_file( 'sha256', $tmp );
 		if ( '' !== $expected_hash && ! hash_equals( strtolower( $expected_hash ), $hash ) ) {
+			wp_delete_file( $tmp );
 			return Picot_Dev_Mcp_Errors::make( 'migration_failed', __( '転送ファイルのハッシュが一致しません。', 'picot-developer-mcp' ) );
 		}
-		$tmp = wp_tempnam( 'picot-dev-transfer' );
-		if ( ! $tmp ) {
-			return Picot_Dev_Mcp_Errors::make( 'migration_failed', __( '一時ファイルを作成できません。', 'picot-developer-mcp' ) );
-		}
-		file_put_contents( $tmp, $body ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 		return $tmp;
+	}
+
+	/**
+	 * REST URL on a peer. The rest_route query works with and without pretty permalinks.
+	 *
+	 * @param string $site_url Peer site URL.
+	 * @param string $route    REST route starting with a slash.
+	 * @return string
+	 */
+	private static function peer_rest_url( $site_url, $route ) {
+		return add_query_arg( 'rest_route', $route, trailingslashit( (string) $site_url ) );
+	}
+
+	/**
+	 * Largest file pulled from a peer.
+	 *
+	 * @return int Bytes.
+	 */
+	private static function max_transfer_bytes() {
+		/**
+		 * Filter the maximum size of one file pulled from a peer.
+		 *
+		 * @param int $bytes Bytes. Default 512 MB.
+		 */
+		return (int) apply_filters( 'picot_dev_mcp_max_transfer_bytes', 512 * MB_IN_BYTES );
 	}
 
 	/**
@@ -188,7 +223,7 @@ class Picot_Dev_Mcp_Transfer {
 		if ( strlen( $expected ) < 16 ) {
 			return Picot_Dev_Mcp_Errors::make( 'migration_failed', __( 'PeerのFingerprintが未設定です。', 'picot-developer-mcp' ) );
 		}
-		$url = untrailingslashit( (string) $peer['url'] ) . '/wp-json/picot-developer-mcp/v1/identity';
+		$url = self::peer_rest_url( (string) $peer['url'], '/picot-developer-mcp/v1/identity' );
 		$response = wp_remote_get(
 			$url,
 			array(

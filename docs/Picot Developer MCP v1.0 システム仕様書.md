@@ -204,7 +204,7 @@ MCP Adapterは通信・Protocol変換を担当し、Picot Developer MCPは実際
 WordPress管理画面へ、
 
 ```text
-ツール
+設定
  └ Picot Developer MCP
 ```
 
