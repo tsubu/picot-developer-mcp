@@ -66,6 +66,8 @@ class Picot_Dev_Mcp_Site {
 			'admin_email',
 			'page_on_front',
 			'page_for_posts',
+			'upload_path',
+			'upload_url_path',
 		);
 	}
 
@@ -95,6 +97,8 @@ class Picot_Dev_Mcp_Site {
 			'template',
 			'stylesheet',
 		);
+		global $wpdb;
+		$exact[] = $wpdb->prefix . 'user_roles';
 		if ( in_array( $name, $exact, true ) ) {
 			return true;
 		}

@@ -122,7 +122,7 @@ class Picot_Dev_Mcp_Validation {
 		if ( in_array( 'exec', $disabled, true ) ) {
 			return null;
 		}
-		$php = ( defined( 'PHP_BINARY' ) && is_string( PHP_BINARY ) && '' !== PHP_BINARY && is_executable( PHP_BINARY ) ) ? PHP_BINARY : '';
+		$php = self::cli_binary();
 		if ( '' === $php ) {
 			return null;
 		}
@@ -138,6 +138,31 @@ class Picot_Dev_Mcp_Validation {
 			'engine' => 'php -l',
 			'detail' => $text,
 		);
+	}
+
+	/**
+	 * Locate a PHP CLI binary.
+	 *
+	 * Under FastCGI/FPM, PHP_BINARY is php-cgi or php-fpm; "php-cgi -l" waits on
+	 * stdin instead of linting, which hangs the request until the gateway times out.
+	 *
+	 * @return string Empty when no CLI binary is available.
+	 */
+	private static function cli_binary() {
+		if ( ! defined( 'PHP_BINARY' ) || ! is_string( PHP_BINARY ) || '' === PHP_BINARY ) {
+			return '';
+		}
+		$candidates = array();
+		if ( 'cli' === PHP_SAPI || 'php' === strtolower( basename( PHP_BINARY ) ) ) {
+			$candidates[] = PHP_BINARY;
+		}
+		$candidates[] = dirname( PHP_BINARY ) . '/php';
+		foreach ( $candidates as $candidate ) {
+			if ( is_file( $candidate ) && is_executable( $candidate ) ) {
+				return $candidate;
+			}
+		}
+		return '';
 	}
 
 	/**

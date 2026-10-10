@@ -50,6 +50,16 @@ class Picot_Dev_Mcp_Errors {
 			$data = array();
 		}
 		$data['code'] = $code;
+		if ( ! isset( $data['status'] ) ) {
+			// REST-level failures (for example authentication) otherwise default to HTTP 500.
+			$statuses       = array(
+				'authentication_failed' => 401,
+				'permission_denied'     => 403,
+				'feature_disabled'      => 403,
+				'invalid_target'        => 400,
+			);
+			$data['status'] = $statuses[ $code ] ?? 500;
+		}
 		return new WP_Error( $code, '[' . $code . '] ' . $message, $data );
 	}
 
@@ -149,7 +159,8 @@ class Picot_Dev_Mcp_Errors {
 		$text = (string) $text;
 		$text = preg_replace( '/pmcp_dev_[a-zA-Z0-9]+/', 'pmcp_dev_[redacted]', $text );
 		$text = preg_replace( '/pmcp_[a-zA-Z0-9]+/', 'pmcp_[redacted]', $text );
-		$text = preg_replace( '/Bearer\s+\S+/i', 'Bearer [redacted]', $text );
+		// Only token-shaped values, so prose such as "Bearer APIキー" in our own messages survives.
+		$text = preg_replace( '/Bearer\s+[A-Za-z0-9._~+\/=-]{8,}/i', 'Bearer [redacted]', $text );
 		$text = preg_replace( '/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]+?-----END [A-Z ]*PRIVATE KEY-----/', '[redacted private key]', $text );
 		return $text;
 	}

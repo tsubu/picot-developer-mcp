@@ -24,12 +24,35 @@ class Picot_Dev_Mcp_Storage {
 		if ( ! empty( $uploads['error'] ) ) {
 			return Picot_Dev_Mcp_Errors::make( 'snapshot_failed', (string) $uploads['error'] );
 		}
-		$dir = trailingslashit( $uploads['basedir'] ) . 'picot-developer-mcp';
+		$dir = trailingslashit( $uploads['basedir'] ) . self::directory_name( $uploads['basedir'] );
 		if ( ! wp_mkdir_p( $dir ) ) {
 			return Picot_Dev_Mcp_Errors::make( 'snapshot_failed', __( 'ストレージディレクトリを作成できません。', 'picot-developer-mcp' ) );
 		}
 		self::protect( $dir );
 		return $dir;
+	}
+
+	/**
+	 * Storage directory name with a random suffix.
+	 *
+	 * Snapshot ids and blob names are predictable, and .htaccess is ignored by nginx,
+	 * so the directory itself must not be guessable. A legacy fixed-name directory is moved once.
+	 *
+	 * @param string $basedir Uploads base directory.
+	 * @return string
+	 */
+	private static function directory_name( $basedir ) {
+		$name = (string) get_option( 'picot_dev_mcp_storage_dir', '' );
+		if ( preg_match( '/^picot-developer-mcp-[a-z0-9]{20}$/', $name ) ) {
+			return $name;
+		}
+		$name   = 'picot-developer-mcp-' . strtolower( wp_generate_password( 20, false, false ) );
+		$legacy = trailingslashit( $basedir ) . 'picot-developer-mcp';
+		if ( is_dir( $legacy ) && ! rename( $legacy, trailingslashit( $basedir ) . $name ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename
+			return 'picot-developer-mcp';
+		}
+		update_option( 'picot_dev_mcp_storage_dir', $name, false );
+		return $name;
 	}
 
 	/**
@@ -216,8 +239,9 @@ class Picot_Dev_Mcp_Storage {
 			file_put_contents( $index, "<?php\n// Silence is golden.\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 		}
 		$htaccess = $dir . '/.htaccess';
-		if ( ! file_exists( $htaccess ) ) {
-			file_put_contents( $htaccess, "Require all denied\nDeny from all\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		// Rewrite the 1.0.0 rules, whose bare "Deny from all" errors on Apache 2.4 without mod_access_compat.
+		if ( ! file_exists( $htaccess ) || ! str_contains( (string) file_get_contents( $htaccess ), 'IfModule' ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			file_put_contents( $htaccess, "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 		}
 	}
 }

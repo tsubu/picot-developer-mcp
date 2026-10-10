@@ -222,6 +222,7 @@ class Picot_Dev_Mcp_Snapshot {
 			}
 			wp_delete_file( $absolute );
 			$removed[] = (string) $relative;
+			self::remove_empty_parents( $area, dirname( (string) $relative ) );
 		}
 
 		foreach ( (array) ( $manifest['deleted'] ?? array() ) as $file ) {
@@ -310,6 +311,27 @@ class Picot_Dev_Mcp_Snapshot {
 			return Picot_Dev_Mcp_Errors::make( 'invalid_target', __( 'Snapshotが見つかりません。', 'picot-developer-mcp' ) );
 		}
 		return $path;
+	}
+
+	/**
+	 * Remove directories left empty after deleting created files, staying inside the target root.
+	 *
+	 * @param string $area     Area.
+	 * @param string $relative Relative directory.
+	 * @return void
+	 */
+	private static function remove_empty_parents( $area, $relative ) {
+		while ( '' !== $relative && '.' !== $relative ) {
+			$absolute = self::absolute( $area, $relative );
+			if ( is_wp_error( $absolute ) || ! is_dir( $absolute ) ) {
+				return;
+			}
+			$entries = scandir( $absolute );
+			if ( ! is_array( $entries ) || count( $entries ) > 2 || ! rmdir( $absolute ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
+				return;
+			}
+			$relative = dirname( $relative );
+		}
 	}
 
 	/**

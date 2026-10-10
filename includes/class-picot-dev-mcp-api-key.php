@@ -147,12 +147,13 @@ class Picot_Dev_Mcp_Api_Key {
 		if ( $limit < 1 || empty( $token['token_id'] ) ) {
 			return true;
 		}
-		$key   = 'picot_dev_mcp_rl_' . md5( (string) $token['token_id'] );
+		// Fixed one-minute window: set_transient() refreshes the expiry, so a single key would never reset under steady traffic.
+		$key   = 'picot_dev_mcp_rl_' . md5( (string) $token['token_id'] ) . '_' . (int) floor( time() / MINUTE_IN_SECONDS );
 		$count = (int) get_transient( $key );
 		if ( $count >= $limit ) {
 			return Picot_Dev_Mcp_Errors::make( 'permission_denied', __( 'APIキーのレート制限を超えました。', 'picot-developer-mcp' ) );
 		}
-		set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
+		set_transient( $key, $count + 1, 2 * MINUTE_IN_SECONDS );
 		return true;
 	}
 
