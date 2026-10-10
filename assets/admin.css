@@ -1,0 +1,33 @@
+.picot-dev-mcp .picot-dev-card {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	margin: 16px 0;
+	padding: 16px 20px;
+	max-width: 920px;
+}
+
+.picot-dev-mcp .picot-dev-check {
+	display: block;
+	margin: 12px 0;
+	padding-bottom: 8px;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.picot-dev-mcp .picot-dev-check:last-of-type {
+	border-bottom: 0;
+	padding-bottom: 0;
+}
+
+.picot-dev-mcp .picot-dev-check .description {
+	margin: 4px 0 0 24px;
+	max-width: 52em;
+}
+
+.picot-dev-mcp .picot-dev-inline {
+	margin: 12px 0 20px;
+}
+
+.picot-dev-mcp code {
+	user-select: all;
+}
